@@ -12,7 +12,7 @@ datasource db {
   provider = "mysql"
 }
 
-model user {
+model User {
   id Int @id @default(autoincrement())
   email String @unique
   password_hash String?
@@ -20,4 +20,6 @@ model user {
   oauth_id String?
   created_at DateTime @default(now())
   updated_at DateTime
+
+  @@map("user")
 }
