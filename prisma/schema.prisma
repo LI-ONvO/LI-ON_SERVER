@@ -19,7 +19,32 @@ model User {
   oauth_provider String?
   oauth_id String?
   created_at DateTime @default(now())
-  updated_at DateTime
+  updated_at DateTime @updatedAt
+
+  profile UserProfile?
 
   @@map("user")
+}
+
+model UserProfile {
+  id Int @id @default(autoincrement())
+  user_id Int @unique
+  job_id Int?
+  nickname String @db.VarChar(10)
+  updated_at DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  job Job? @relation(fields: [job_id], references: [id])
+
+  @@index([job_id])
+  @@map("user_profile")
+}
+
+model Job {
+  id Int @id @default(autoincrement())
+  name String @unique
+
+  profiles UserProfile[]
+
+  @@map("job")
 }
