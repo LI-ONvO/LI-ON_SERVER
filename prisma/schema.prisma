@@ -17,7 +17,7 @@ model user {
   email String @unique
   password_hash String?
   oauth_provider String?
-  string oauth_id String?
+  oauth_id String?
   created_at DateTime @default(now())
   updated_at DateTime
 }
