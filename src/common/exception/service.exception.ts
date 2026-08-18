@@ -1,7 +1,13 @@
-import { ENTITY_NOT_FOUND, ErrorCode } from './error.code';
+import { ENTITY_NOT_FOUND, ErrorCode, VALIDATION_ERROR } from './error.code';
 
 export const EntityNotFoundException = (message?: string): ServiceException => {
   return new ServiceException(ENTITY_NOT_FOUND, message);
+};
+
+export const ValidationErrorException = (
+  message?: string,
+): ServiceException => {
+  return new ServiceException(VALIDATION_ERROR, message);
 };
 
 export class ServiceException extends Error {
