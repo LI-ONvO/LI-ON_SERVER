@@ -4,7 +4,9 @@ export const EntityNotFoundException = (message?: string): ServiceException => {
   return new ServiceException(ENTITY_NOT_FOUND, message);
 };
 
-export const ValidationErrorException = (message?: string): ServiceException => {
+export const ValidationErrorException = (
+  message?: string,
+): ServiceException => {
   return new ServiceException(VALIDATION_ERROR, message);
 };
 
