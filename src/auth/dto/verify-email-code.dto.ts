@@ -11,3 +11,9 @@ export class VerifyEmailCodeRequest {
   @Length(6, 6)
   code: string;
 }
+
+export class VerifyEmailCodeResponse {
+  email: string;
+  verified: boolean;
+  verificationToken: string;
+}

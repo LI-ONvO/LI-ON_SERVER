@@ -11,3 +11,18 @@ export class LoginRequest {
   @MaxLength(20)
   password: string;
 }
+
+export class LoginUserResponse {
+  userId: number;
+  email: string;
+  nickname: string;
+}
+
+export class LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: 'Bearer';
+  expiresIn: number;
+  user: LoginUserResponse;
+  isFirstLogin: boolean;
+}

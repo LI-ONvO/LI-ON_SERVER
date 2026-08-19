@@ -6,3 +6,8 @@ export class SendEmailCodeRequest {
   @MaxLength(100)
   email: string;
 }
+
+export class SendEmailCodeResponse {
+  email: string;
+  expiresIn: number;
+}

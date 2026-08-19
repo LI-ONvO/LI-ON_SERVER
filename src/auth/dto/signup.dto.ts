@@ -12,7 +12,6 @@ export class SignupRequest {
   @MaxLength(100)
   email: string;
 
-  // 형식 검사는 AuthService 에서 수성함
   @IsNotEmpty()
   @IsString()
   password: string;
@@ -34,4 +33,11 @@ export class SignupRequest {
   @IsOptional()
   @IsString()
   verificationToken?: string;
+}
+
+export class SignupResponse {
+  userId: number;
+  email: string;
+  nickname: string;
+  createdAt: string;
 }

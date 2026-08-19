@@ -5,3 +5,9 @@ export class RefreshTokenRequest {
   @IsJWT()
   refreshToken: string;
 }
+
+export class RefreshTokenResponse {
+  accessToken: string;
+  tokenType: 'Bearer';
+  expiresIn: number;
+}

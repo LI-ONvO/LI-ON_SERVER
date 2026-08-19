@@ -6,3 +6,7 @@ export class CheckEmailRequest {
   @MaxLength(100)
   email: string;
 }
+
+export class CheckEmailResponse {
+  available: boolean;
+}
