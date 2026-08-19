@@ -7,9 +7,6 @@ const exceptionOf =
   (message?: string): ServiceException =>
     new ServiceException(errorCode, message);
 
-export const InvalidVerificationCodeException = exceptionOf(
-  AuthErrorCode.INVALID_VERIFICATION_CODE,
-);
 export const InvalidEmailFormatException = exceptionOf(
   AuthErrorCode.INVALID_EMAIL_FORMAT,
 );
@@ -19,29 +16,22 @@ export const InvalidPasswordFormatException = exceptionOf(
 export const PasswordMismatchException = exceptionOf(
   AuthErrorCode.PASSWORD_MISMATCH,
 );
-export const VerificationCodeExpiredException = exceptionOf(
-  AuthErrorCode.VERIFICATION_CODE_EXPIRED,
-);
+export const InvalidCodeException = exceptionOf(AuthErrorCode.INVALID_CODE);
+export const CodeExpiredException = exceptionOf(AuthErrorCode.CODE_EXPIRED);
 export const InvalidCredentialsException = exceptionOf(
   AuthErrorCode.INVALID_CREDENTIALS,
 );
 export const InvalidRefreshTokenException = exceptionOf(
   AuthErrorCode.INVALID_REFRESH_TOKEN,
 );
-export const EmailNotVerifiedException = exceptionOf(
-  AuthErrorCode.EMAIL_NOT_VERIFIED,
-);
 export const AccountLockedException = exceptionOf(AuthErrorCode.ACCOUNT_LOCKED);
-export const UserNotFoundException = exceptionOf(AuthErrorCode.USER_NOT_FOUND);
-export const VerificationCodeNotFoundException = exceptionOf(
-  AuthErrorCode.VERIFICATION_CODE_NOT_FOUND,
-);
+export const CodeNotFoundException = exceptionOf(AuthErrorCode.CODE_NOT_FOUND);
 export const EmailAlreadyExistsException = exceptionOf(
   AuthErrorCode.EMAIL_ALREADY_EXISTS,
 );
-export const TooManyVerificationRequestsException = exceptionOf(
+export const TooManyRequestsException = exceptionOf(
   AuthErrorCode.TOO_MANY_VERIFICATION_REQUESTS,
 );
-export const TooManyVerificationAttemptsException = exceptionOf(
+export const TooManyAttemptsException = exceptionOf(
   AuthErrorCode.TOO_MANY_VERIFICATION_ATTEMPTS,
 );

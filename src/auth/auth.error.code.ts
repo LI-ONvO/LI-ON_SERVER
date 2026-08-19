@@ -1,11 +1,5 @@
 import { ErrorCode } from '../common/exception/error.code';
 
-export const INVALID_VERIFICATION_CODE: ErrorCode = {
-  status: 400,
-  code: 'INVALID_VERIFICATION_CODE',
-  message: '인증 코드가 올바르지 않습니다.',
-};
-
 export const INVALID_EMAIL_FORMAT: ErrorCode = {
   status: 400,
   code: 'INVALID_EMAIL_FORMAT',
@@ -24,7 +18,13 @@ export const PASSWORD_MISMATCH: ErrorCode = {
   message: '비밀번호와 비밀번호 확인이 일치하지 않습니다.',
 };
 
-export const VERIFICATION_CODE_EXPIRED: ErrorCode = {
+export const INVALID_CODE: ErrorCode = {
+  status: 400,
+  code: 'INVALID_CODE',
+  message: '인증 코드가 올바르지 않습니다.',
+};
+
+export const CODE_EXPIRED: ErrorCode = {
   status: 400,
   code: 'CODE_EXPIRED',
   message: '인증 코드 유효 시간이 만료되었습니다.',
@@ -42,25 +42,19 @@ export const INVALID_REFRESH_TOKEN: ErrorCode = {
   message: '유효하지 않거나 만료된 리프레시 토큰입니다.',
 };
 
-export const EMAIL_NOT_VERIFIED: ErrorCode = {
-  status: 403,
-  code: 'EMAIL_NOT_VERIFIED',
-  message: '이메일 인증이 필요합니다.',
-};
-
 export const ACCOUNT_LOCKED: ErrorCode = {
   status: 403,
   code: 'ACCOUNT_LOCKED',
-  message: '로그인 시도 횟수를 초과하여 계정이 잠겼습니다.',
+  message: '로그인 5회 실패로 계정이 잠겼습니다.',
 };
 
-export const USER_NOT_FOUND: ErrorCode = {
-  status: 404,
-  code: 'USER_NOT_FOUND',
-  message: '존재하지 않는 사용자입니다.',
+export const ACCOUNT_SUSPENDED: ErrorCode = {
+  status: 403,
+  code: 'ACCOUNT_SUSPENDED',
+  message: '정지된 계정입니다.',
 };
 
-export const VERIFICATION_CODE_NOT_FOUND: ErrorCode = {
+export const CODE_NOT_FOUND: ErrorCode = {
   status: 404,
   code: 'CODE_NOT_FOUND',
   message: '발송된 인증 코드가 없거나 이미 사용되었습니다.',
