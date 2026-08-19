@@ -27,11 +27,6 @@ export class SignupRequest {
 
   @IsOptional()
   @IsString()
-  @MaxLength(20)
-  phoneNumber?: string;
-
-  @IsOptional()
-  @IsString()
   verificationToken?: string;
 }
 
