@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { randomInt } from 'crypto';
 import { ValidationErrorException } from '../common/exception/service.exception';
@@ -34,26 +35,36 @@ const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d])\S{8,20}$/;
 
 const SALT_ROUNDS = 10;
 
-/** 명세의 send-code 응답 expiresIn 과 동일한 값이어야 한다. (DB 설계는 500 으로 적혀 있어 확인 필요) */
-const CODE_TTL = 180;
-
-/** DB 설계의 first_use TTL */
-const FIRST_USE_TTL = 2592000;
-
-const MAX_SEND = 5;
-const SEND_WINDOW = 3600;
-const MAX_ATTEMPT = 5;
-const MAX_LOGIN_FAIL = 5;
-const LOGIN_LOCK_DURATION = 1800;
-
 @Injectable()
 export class AuthService {
+  /** 명세의 send-code 응답 expiresIn 과 동일한 값이어야 한다. */
+  private readonly codeTtl: number;
+  private readonly maxSend: number;
+  private readonly sendWindow: number;
+  private readonly maxAttempt: number;
+  private readonly maxLoginFail: number;
+  private readonly loginLockDuration: number;
+  /** DB 설계의 first_use TTL */
+  private readonly firstUseTtl: number;
+
   constructor(
     private readonly userService: UserService,
     private readonly tokenService: TokenService,
     private readonly redisService: RedisService,
     private readonly mailService: MailService,
-  ) {}
+    configService: ConfigService,
+  ) {
+    const num = (key: string, fallback: number): number =>
+      Number(configService.get<string>(key) ?? fallback);
+
+    this.codeTtl = num('EMAIL_CODE_TTL', 180);
+    this.maxSend = num('EMAIL_CODE_MAX_SEND', 5);
+    this.sendWindow = num('EMAIL_CODE_SEND_WINDOW', 3600);
+    this.maxAttempt = num('EMAIL_CODE_MAX_ATTEMPT', 5);
+    this.maxLoginFail = num('LOGIN_MAX_FAIL_COUNT', 5);
+    this.loginLockDuration = num('LOGIN_LOCK_DURATION', 1800);
+    this.firstUseTtl = num('FIRST_USE_TTL', 2592000);
+  }
 
   /** GET /api/auth/check-email */
   async checkEmail(email: string): Promise<CheckEmailResponse> {
@@ -73,22 +84,28 @@ export class AuthService {
     }
 
     if (
-      (await this.incr(sendCountKey(normalizedEmail), SEND_WINDOW)) > MAX_SEND
+      (await this.incr(sendCountKey(normalizedEmail), this.sendWindow)) >
+      this.maxSend
     ) {
       throw TooManyRequestsException();
     }
 
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
 
-    await this.redisService.set(codeKey(normalizedEmail), code, 'EX', CODE_TTL);
+    await this.redisService.set(
+      codeKey(normalizedEmail),
+      code,
+      'EX',
+      this.codeTtl,
+    );
     await this.redisService.del(attemptKey(normalizedEmail));
     await this.mailService.sendVerificationCode(
       normalizedEmail,
       code,
-      CODE_TTL,
+      this.codeTtl,
     );
 
-    return { email: normalizedEmail, expiresIn: CODE_TTL };
+    return { email: normalizedEmail, expiresIn: this.codeTtl };
   }
 
   /** POST /api/auth/email/verify-code */
@@ -110,7 +127,8 @@ export class AuthService {
 
     // 6자리 코드라 시도 횟수 제한이 없으면 전수 대입이 가능하다.
     if (
-      (await this.incr(attemptKey(normalizedEmail), CODE_TTL)) > MAX_ATTEMPT
+      (await this.incr(attemptKey(normalizedEmail), this.codeTtl)) >
+      this.maxAttempt
     ) {
       await this.redisService.del(codeKey(normalizedEmail));
       throw TooManyAttemptsException();
@@ -167,7 +185,12 @@ export class AuthService {
     });
 
     // DB 설계의 `first_use:{userId}` - 로그인 시 isFirstLogin 판별에 사용
-    await this.redisService.set(firstUseKey(user.id), '', 'EX', FIRST_USE_TTL);
+    await this.redisService.set(
+      firstUseKey(user.id),
+      '',
+      'EX',
+      this.firstUseTtl,
+    );
 
     return {
       userId: user.id,
@@ -182,7 +205,9 @@ export class AuthService {
     const normalizedEmail = normalizeEmail(request.email);
     const failKey = loginFailKey(normalizedEmail);
 
-    if (Number((await this.redisService.get(failKey)) ?? 0) >= MAX_LOGIN_FAIL) {
+    if (
+      Number((await this.redisService.get(failKey)) ?? 0) >= this.maxLoginFail
+    ) {
       throw AccountLockedException();
     }
 
@@ -192,7 +217,9 @@ export class AuthService {
       !user?.password_hash ||
       !(await bcrypt.compare(request.password, user.password_hash))
     ) {
-      if ((await this.incr(failKey, LOGIN_LOCK_DURATION)) >= MAX_LOGIN_FAIL) {
+      if (
+        (await this.incr(failKey, this.loginLockDuration)) >= this.maxLoginFail
+      ) {
         throw AccountLockedException();
       }
 
