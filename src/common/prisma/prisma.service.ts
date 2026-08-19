@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
-import { PrismaClient } from '../../generated/prisma/client.js';
+import { PrismaClient } from '../../../generated/prisma/client.js';
 
 const databaseUrl = process.env.DATABASE_URL;
 
