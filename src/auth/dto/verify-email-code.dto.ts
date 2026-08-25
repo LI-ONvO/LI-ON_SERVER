@@ -15,5 +15,4 @@ export class VerifyEmailCodeRequest {
 export class VerifyEmailCodeResponse {
   email: string;
   verified: boolean;
-  verificationToken: string;
 }

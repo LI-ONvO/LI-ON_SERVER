@@ -226,6 +226,9 @@ export class AuthService {
 
     await this.redisService.del(failKey);
 
+    const firstUseRedisKey = firstUseKey(user.id);
+    const isFirstLogin = (await this.redisService.del(firstUseRedisKey)) === 1;
+
     return {
       accessToken: this.tokenService.issueAccessToken(user.id, user.email),
       refreshToken: await this.tokenService.issueRefreshToken(user.id),
@@ -236,8 +239,7 @@ export class AuthService {
         email: user.email,
         nickname: user.profile?.nickname ?? '',
       },
-      isFirstLogin:
-        (await this.redisService.exists(firstUseKey(user.id))) === 1,
+      isFirstLogin,
     };
   }
 
