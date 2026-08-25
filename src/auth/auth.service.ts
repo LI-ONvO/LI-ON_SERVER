@@ -232,7 +232,6 @@ export class AuthService {
     return {
       accessToken: this.tokenService.issueAccessToken(user.id, user.email),
       refreshToken: await this.tokenService.issueRefreshToken(user.id),
-      tokenType: 'Bearer',
       expiresIn: this.tokenService.accessExpiresIn,
       user: {
         userId: user.id,

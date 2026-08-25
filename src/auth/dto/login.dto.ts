@@ -21,7 +21,6 @@ export class LoginUserResponse {
 export class LoginResponse {
   accessToken: string;
   refreshToken: string;
-  tokenType: 'Bearer';
   expiresIn: number;
   user: LoginUserResponse;
   isFirstLogin: boolean;
