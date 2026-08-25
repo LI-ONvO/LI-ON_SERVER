@@ -17,8 +17,6 @@ model User {
   id Int @id @default(autoincrement())
   email String @unique
   password_hash String?
-  oauth_provider String?
-  oauth_id String?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
