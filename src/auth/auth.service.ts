@@ -145,7 +145,7 @@ export class AuthService {
 
     return {
       email: normalizedEmail,
-      verified: true
+      verified: true,
     };
   }
 
