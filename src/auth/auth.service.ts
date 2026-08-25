@@ -145,9 +145,7 @@ export class AuthService {
 
     return {
       email: normalizedEmail,
-      verified: true,
-      verificationToken:
-        this.tokenService.issueEmailVerificationToken(normalizedEmail),
+      verified: true
     };
   }
 
