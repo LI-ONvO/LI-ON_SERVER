@@ -8,6 +8,5 @@ export class RefreshTokenRequest {
 
 export class RefreshTokenResponse {
   accessToken: string;
-  tokenType: 'Bearer';
   expiresIn: number;
 }

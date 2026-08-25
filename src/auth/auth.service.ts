@@ -253,7 +253,6 @@ export class AuthService {
 
     return {
       accessToken: this.tokenService.issueAccessToken(user.id, user.email),
-      tokenType: 'Bearer',
       expiresIn: this.tokenService.accessExpiresIn,
     };
   }
