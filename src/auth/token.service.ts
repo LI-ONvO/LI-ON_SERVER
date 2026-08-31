@@ -16,11 +16,6 @@ interface RefreshTokenPayload {
   type: 'refresh';
 }
 
-interface EmailVerificationPayload {
-  email: string;
-  type: 'email_verification';
-}
-
 /**
  * refreshToken 은 ERD 에 테이블이 없어 Redis 에 보관한다.
  * - `auth:refresh:{userId}:{tokenHash}` : 개별 토큰(만료 TTL)
@@ -117,39 +112,5 @@ export class TokenService {
     const keys = tokenHashes.map((hash) => this.refreshKey(userId, hash));
 
     await this.redisService.del(indexKey, ...keys);
-  }
-
-  issueEmailVerificationToken(email: string): string {
-    const payload: EmailVerificationPayload = {
-      email,
-      type: 'email_verification',
-    };
-
-    return this.jwtService.sign(payload, {
-      secret: this.configService.getOrThrow<string>(
-        'JWT_EMAIL_VERIFICATION_SECRET',
-      ),
-      expiresIn: Number(
-        this.configService.get<string>(
-          'JWT_EMAIL_VERIFICATION_EXPIRES_IN',
-          '1800',
-        ),
-      ),
-    });
-  }
-
-  /** 검증에 성공하면 인증된 이메일을, 실패하면 null 을 반환한다. */
-  verifyEmailVerificationToken(token: string): string | null {
-    try {
-      const payload = this.jwtService.verify<EmailVerificationPayload>(token, {
-        secret: this.configService.getOrThrow<string>(
-          'JWT_EMAIL_VERIFICATION_SECRET',
-        ),
-      });
-
-      return payload.type === 'email_verification' ? payload.email : null;
-    } catch {
-      return null;
-    }
   }
 }

@@ -46,6 +46,8 @@ export class AuthService {
   private readonly loginLockDuration: number;
   /** DB 설계의 first_use TTL */
   private readonly firstUseTtl: number;
+  /** 코드 검증 성공 후 signup 까지 유효한 시간 */
+  private readonly verifiedTtl: number;
 
   constructor(
     private readonly userService: UserService,
@@ -64,6 +66,7 @@ export class AuthService {
     this.maxLoginFail = num('LOGIN_MAX_FAIL_COUNT', 5);
     this.loginLockDuration = num('LOGIN_LOCK_DURATION', 1800);
     this.firstUseTtl = num('FIRST_USE_TTL', 2592000);
+    this.verifiedTtl = num('EMAIL_VERIFIED_TTL', 1800);
   }
 
   /** GET /api/auth/check-email */
@@ -143,6 +146,14 @@ export class AuthService {
       attemptKey(normalizedEmail),
     );
 
+    // signup 이 소비할 인증 완료 마커
+    await this.redisService.set(
+      verifiedKey(normalizedEmail),
+      '',
+      'EX',
+      this.verifiedTtl,
+    );
+
     return {
       email: normalizedEmail,
       verified: true,
@@ -162,13 +173,8 @@ export class AuthService {
     }
 
     // 명세의 signup 에는 별도 인증 실패 코드가 없어 VALIDATION_ERROR(422) 로 응답한다.
-    const verifiedEmail = request.verificationToken
-      ? this.tokenService.verifyEmailVerificationToken(
-          request.verificationToken,
-        )
-      : null;
-
-    if (verifiedEmail !== normalizedEmail) {
+    // del 반환값으로 확인 + 소비를 한 번에 하여 마커 재사용을 막는다.
+    if ((await this.redisService.del(verifiedKey(normalizedEmail))) !== 1) {
       throw ValidationErrorException('이메일 인증이 완료되지 않았습니다.');
     }
 
@@ -291,5 +297,6 @@ const normalizeEmail = (email: string): string => email.trim().toLowerCase();
 const codeKey = (email: string): string => `verify:signup:${email}`;
 const attemptKey = (email: string): string => `verify:signup:attempt:${email}`;
 const sendCountKey = (email: string): string => `verify:signup:send:${email}`;
+const verifiedKey = (email: string): string => `verify:signup:done:${email}`;
 const firstUseKey = (userId: number): string => `first_use:${userId}`;
 const loginFailKey = (email: string): string => `auth:login:fail:${email}`;

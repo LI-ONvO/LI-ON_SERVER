@@ -1,10 +1,4 @@
-import {
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Length,
-  MaxLength,
-} from 'class-validator';
+import { IsNotEmpty, IsString, Length, MaxLength } from 'class-validator';
 
 export class SignupRequest {
   @IsNotEmpty()
@@ -24,10 +18,6 @@ export class SignupRequest {
   @IsString()
   @Length(2, 10)
   nickname: string;
-
-  @IsOptional()
-  @IsString()
-  verificationToken?: string;
 }
 
 export class SignupResponse {
