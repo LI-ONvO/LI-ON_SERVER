@@ -232,12 +232,16 @@ export class AuthService {
 
     await this.redisService.del(failKey);
 
-    const firstUseRedisKey = firstUseKey(user.id);
-    const isFirstLogin = (await this.redisService.del(firstUseRedisKey)) === 1;
+    const accessToken = this.tokenService.issueAccessToken(user.id, user.email);
+    const refreshToken = await this.tokenService.issueRefreshToken(user.id);
+
+    // 토큰 발급이 실패하면 first_use 키를 남겨 재시도 시 최초 로그인으로 남도록 발급 뒤에 삭제한다화
+    const isFirstLogin =
+      (await this.redisService.del(firstUseKey(user.id))) === 1;
 
     return {
-      accessToken: this.tokenService.issueAccessToken(user.id, user.email),
-      refreshToken: await this.tokenService.issueRefreshToken(user.id),
+      accessToken,
+      refreshToken,
       expiresIn: this.tokenService.accessExpiresIn,
       user: {
         userId: user.id,
