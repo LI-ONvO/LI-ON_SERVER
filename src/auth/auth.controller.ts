@@ -74,6 +74,9 @@ export class AuthController {
     return this.authService.refresh(request.refreshToken);
   }
 
+  @Post('/logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard)
   async logout(@Req() req: Request & { user: User }): Promise<void> {
     await this.authService.logout(req.user.id);
   }
