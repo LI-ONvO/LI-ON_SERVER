@@ -254,7 +254,8 @@ export class AuthService {
 
   /** POST /api/auth/refresh */
   async refresh(refreshToken: string): Promise<RefreshTokenResponse> {
-    const userId = await this.tokenService.verifyRefreshToken(refreshToken);
+    // 재발급 전에 기존 토큰을 소비해 두어야 같은 토큰이 두 번 쓰이지 않는다.
+    const userId = await this.tokenService.consumeRefreshToken(refreshToken);
     const user = await this.userService.getUserById(userId);
 
     if (!user) {
@@ -296,7 +297,6 @@ export class AuthService {
   }
 }
 
-/** DB 설계의 `{normalized_email}` 규칙 */
 const normalizeEmail = (email: string): string => email.trim().toLowerCase();
 
 const codeKey = (email: string): string => `verify:signup:${email}`;

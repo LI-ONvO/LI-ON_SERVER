@@ -7,9 +7,11 @@ import {
   Post,
   Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import type { User } from 'generated/prisma/client';
 import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
 import { CheckEmailRequest, CheckEmailResponse } from './dto/check-email.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
 import {

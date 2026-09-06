@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { RedisService } from '../common/redis/redis.service';
 import { InvalidRefreshTokenException } from './auth.exception';
 
@@ -63,7 +63,11 @@ export class TokenService {
   }
 
   async issueRefreshToken(userId: number): Promise<string> {
-    const payload: RefreshTokenPayload = { sub: userId, type: 'refresh' };
+    const payload: RefreshTokenPayload = {
+      sub: userId,
+      type: 'refresh',
+      jti: randomUUID(),
+    };
     const token = this.jwtService.sign(payload, {
       secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       expiresIn: this.refreshExpiresIn,
@@ -82,8 +86,8 @@ export class TokenService {
     return token;
   }
 
-  /** 서명 + Redis 보관 여부를 확인한 뒤 userId 를 반환한다. */
-  async verifyRefreshToken(token: string): Promise<number> {
+  // EXISTS 로 확인과 폐기를 DEL 한 번으로 처리함
+  async consumeRefreshToken(token: string): Promise<number> {
     let payload: RefreshTokenPayload;
 
     try {
@@ -94,18 +98,23 @@ export class TokenService {
       throw InvalidRefreshTokenException();
     }
 
-    const exists = await this.redisService.exists(
-      this.refreshKey(payload.sub, this.hashToken(token)),
+    const tokenHash = this.hashToken(token);
+    const consumed = await this.redisService.del(
+      this.refreshKey(payload.sub, tokenHash),
     );
 
-    if (exists === 0) {
+    if (consumed !== 1) {
       throw InvalidRefreshTokenException();
     }
+
+    // 소비에 성공한 요청만 인덱스를 정리한다. 실패해도 남은 해시는 이미 만료된
+    // 키를 가리킬 뿐이라 revokeAllRefreshTokens 동작에 영향이 없다.
+    await this.redisService.srem(this.refreshIndexKey(payload.sub), tokenHash);
 
     return payload.sub;
   }
 
-  /** 로그아웃 - 해당 사용자의 refreshToken 을 모두 폐기한다. */
+  // 로그아웃 - 해당 사용자의 refreshToken 을 모두 폐기한다.
   async revokeAllRefreshTokens(userId: number): Promise<void> {
     const indexKey = this.refreshIndexKey(userId);
     const tokenHashes = await this.redisService.smembers(indexKey);
