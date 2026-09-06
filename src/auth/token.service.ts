@@ -14,6 +14,7 @@ export interface AccessTokenPayload {
 interface RefreshTokenPayload {
   sub: number;
   type: 'refresh';
+  jti: string;
 }
 
 /**
