@@ -23,8 +23,83 @@ model User {
   updated_at DateTime @updatedAt
 
   profile UserProfile?
+  desired_fields UserDesiredField[]
+  onboarding_answers OnboardingAnswer[]
 
   @@map("user")
+}
+
+model Field {
+  id Int @id @default(autoincrement())
+  name String @db.VarChar(30)
+
+  desired_by UserDesiredField[]
+  onboarding_options OnboardingOption[]
+
+  @@map("field")
+}
+
+model UserDesiredField {
+  id Int @id @default(autoincrement())
+  user_id Int
+  field_id Int
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  field Field @relation(fields: [field_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, field_id])
+  @@map("user_desired_field")
+}
+
+model OnboardingQuestion {
+  id Int @id @default(autoincrement())
+  question_key String @unique @db.VarChar(50)
+  title String
+  min_select Int @default(1)
+  max_select Int?
+  order_no Int
+  is_active Boolean @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  options OnboardingOption[]
+  answers OnboardingAnswer[]
+
+  @@map("onboarding_question")
+}
+
+model OnboardingOption {
+  id Int @id @default(autoincrement())
+  question_id Int
+  field_id Int?
+  option_key String @db.VarChar(50)
+  value String @db.VarChar(50)
+  label String
+  order_no Int
+  is_active Boolean @default(true)
+
+  question OnboardingQuestion @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  field Field? @relation(fields: [field_id], references: [id])
+  answers OnboardingAnswer[]
+
+  @@unique([question_id, option_key])
+  @@unique([question_id, value])
+  @@map("onboarding_option")
+}
+
+model OnboardingAnswer {
+  id Int @id @default(autoincrement())
+  user_id Int
+  question_id Int
+  option_id Int
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  question OnboardingQuestion @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  option OnboardingOption @relation(fields: [option_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, option_id])
+  @@map("onboarding_answer")
 }
 
 model UserProfile {
