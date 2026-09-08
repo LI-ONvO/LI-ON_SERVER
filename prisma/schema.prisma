@@ -17,6 +17,8 @@ model User {
   id Int @id @default(autoincrement())
   email String @unique
   password_hash String?
+  is_onboarded Boolean @default(false)
+  onboarded_at DateTime?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
@@ -28,22 +30,24 @@ model User {
 model UserProfile {
   id Int @id @default(autoincrement())
   user_id Int @unique
-  job_id Int?
   nickname String @db.VarChar(10)
   updated_at DateTime @updatedAt
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  job Job? @relation(fields: [job_id], references: [id])
 
-  @@index([job_id])
   @@map("user_profile")
 }
 
-model Job {
-  id Int @id @default(autoincrement())
-  name String @unique
+model Certification {
+  jm_cd String @id @db.VarChar(10)
+  jm_nm String
+  qual_gb_cd String
+  series_nm String?
+  // ERD 는 decimal 이지만 Prisma Decimal 은 JSON 에 문자열로 직렬화된다. 명세의 number 를 맞추려면 Float 다
+  doc_pass_rate Float?
+  prac_pass_rate Float?
+  doc_fee Int?
+  prac_fee Int?
 
-  profiles UserProfile[]
-
-  @@map("job")
+  @@map("certification")
 }
