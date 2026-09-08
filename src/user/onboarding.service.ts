@@ -62,6 +62,10 @@ export class OnboardingService {
       ]),
     );
 
+    if (submitted.size !== request.answers.length) {
+      throw ValidationErrorException('문항은 한 번만 제출해야 합니다.');
+    }
+
     for (const questionKey of submitted.keys()) {
       if (
         !questions.some((question) => question.question_key === questionKey)
