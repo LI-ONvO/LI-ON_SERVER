@@ -89,6 +89,11 @@ export class RecommendationService {
     const reasonByJmCd = new Map<string, string>();
 
     for (const rawItem of rawItems as unknown[]) {
+
+      if (typeof rawItem !== 'object' || rawItem === null) {
+        continue;
+      }
+
       const { jmCd, reason } = rawItem as { jmCd?: unknown; reason?: unknown };
 
       if (
