@@ -185,7 +185,7 @@ export class AuthService {
     const user = await this.userService.createUser({
       email: normalizedEmail,
       password_hash: await bcrypt.hash(request.password, SALT_ROUNDS),
-      profile: { create: { nickname: request.nickname } },
+      nickname: request.nickname,
     });
 
     // DB 설계의 `first_use:{userId}`
@@ -246,7 +246,7 @@ export class AuthService {
       user: {
         userId: user.id,
         email: user.email,
-        nickname: user.profile?.nickname ?? '',
+        nickname: user.nickname,
       },
       isFirstLogin,
     };
