@@ -17,14 +17,15 @@ model User {
   id Int @id @default(autoincrement())
   email String @unique
   password_hash String?
+  nickname String @db.VarChar(10)
   is_onboarded Boolean @default(false)
   onboarded_at DateTime?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  profile UserProfile?
   desired_fields UserDesiredField[]
   onboarding_answers OnboardingAnswer[]
+  recommendation Recommendation?
 
   @@map("user")
 }
@@ -35,6 +36,7 @@ model Field {
 
   desired_by UserDesiredField[]
   onboarding_options OnboardingOption[]
+  certificates CertificateField[]
 
   @@map("field")
 }
@@ -102,17 +104,6 @@ model OnboardingAnswer {
   @@map("onboarding_answer")
 }
 
-model UserProfile {
-  id Int @id @default(autoincrement())
-  user_id Int @unique
-  nickname String @db.VarChar(10)
-  updated_at DateTime @updatedAt
-
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@map("user_profile")
-}
-
 model Certification {
   jm_cd String @id @db.VarChar(10)
   jm_nm String
@@ -124,5 +115,88 @@ model Certification {
   doc_fee Int?
   prac_fee Int?
 
+  qual_detail QualDetail?
+  exam_schedules ExamSchedule[]
+  fields CertificateField[]
+  recommendation_items RecommendationItem[]
+
   @@map("certification")
+}
+
+// 국가기술자격만 행이 존재한다. 공공데이터 결측이 흔해 jm_cd 외에는 전부 nullable
+model QualDetail {
+  jm_cd String @id @db.VarChar(10)
+  mdoblig_fld_nm String? @db.VarChar(100)
+  career String? @db.Text
+  job String? @db.Text
+  summary String? @db.Text
+  trend String? @db.Text
+  hist String? @db.Text
+
+  certification Certification @relation(fields: [jm_cd], references: [jm_cd], onDelete: Cascade)
+
+  @@map("qual_detail")
+}
+
+model ExamSchedule {
+  jm_cd String @db.VarChar(10)
+  impl_yy Int @db.SmallInt
+  impl_seq String @db.VarChar(10)
+  // doc_reg_start_dt 파생 STORED 생성 컬럼(NULL 은 1000-01-01). Prisma 가 생성 컬럼을 모르므로
+  // 마이그레이션 SQL 에서 직접 만든다. 이 서버는 exam_schedule 을 읽기만 한다(적재는 별도 서버)
+  reg_key DateTime @db.Date
+  description String? @db.VarChar(255)
+  doc_reg_start_dt DateTime? @db.Date
+  doc_reg_end_dt DateTime? @db.Date
+  doc_exam_start_dt DateTime? @db.Date
+  doc_exam_end_dt DateTime? @db.Date
+  doc_pass_dt DateTime? @db.Date
+  prac_reg_start_dt DateTime? @db.Date
+  prac_reg_end_dt DateTime? @db.Date
+  prac_exam_start_dt DateTime? @db.Date
+  prac_exam_end_dt DateTime? @db.Date
+  prac_pass_dt DateTime? @db.Date
+
+  certification Certification @relation(fields: [jm_cd], references: [jm_cd], onDelete: Cascade)
+
+  @@id([jm_cd, impl_yy, impl_seq, reg_key])
+  @@map("exam_schedule")
+}
+
+model CertificateField {
+  id Int @id @default(autoincrement())
+  jm_cd String @db.VarChar(10)
+  field_id Int
+
+  certification Certification @relation(fields: [jm_cd], references: [jm_cd], onDelete: Cascade)
+  field Field @relation(fields: [field_id], references: [id], onDelete: Cascade)
+
+  @@unique([jm_cd, field_id])
+  @@map("certificate_field")
+}
+
+model Recommendation {
+  id Int @id @default(autoincrement())
+  user_id Int @unique
+  generated_at DateTime
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  items RecommendationItem[]
+
+  @@map("recommendation")
+}
+
+model RecommendationItem {
+  id Int @id @default(autoincrement())
+  recommendation_id Int
+  jm_cd String @db.VarChar(10)
+  rank_no Int
+  reason String @db.Text
+
+  recommendation Recommendation @relation(fields: [recommendation_id], references: [id], onDelete: Cascade)
+  certification Certification @relation(fields: [jm_cd], references: [jm_cd], onDelete: Cascade)
+
+  @@unique([recommendation_id, rank_no])
+  @@map("recommendation_item")
 }
