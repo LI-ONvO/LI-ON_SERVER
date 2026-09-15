@@ -22,7 +22,6 @@ model User {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  profile UserProfile?
   desired_fields UserDesiredField[]
   onboarding_answers OnboardingAnswer[]
 
@@ -100,17 +99,6 @@ model OnboardingAnswer {
 
   @@unique([user_id, option_id])
   @@map("onboarding_answer")
-}
-
-model UserProfile {
-  id Int @id @default(autoincrement())
-  user_id Int @unique
-  nickname String @db.VarChar(10)
-  updated_at DateTime @updatedAt
-
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@map("user_profile")
 }
 
 model Certification {

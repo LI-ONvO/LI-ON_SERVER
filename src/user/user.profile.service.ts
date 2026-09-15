@@ -14,7 +14,6 @@ export class UserProfileService {
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
       include: {
-        profile: true,
         desired_fields: { include: { field: true }, orderBy: { id: 'asc' } },
       },
     });
@@ -26,7 +25,7 @@ export class UserProfileService {
     return {
       id: user.id,
       email: user.email,
-      nickname: user.profile?.nickname ?? '',
+      nickname: user.nickname,
       isOnboarded: user.is_onboarded,
       desiredFields: user.desired_fields.map((desired) => ({
         id: desired.field.id,
@@ -39,12 +38,15 @@ export class UserProfileService {
     userId: number,
     nickname: string,
   ): Promise<UpdateProfileResponse> {
-    // 프로필 행은 가입 시 만들어지지만, 없더라도 수정 요청이 500 으로 새지 않게 upsert 한다.
-    await this.prismaService.userProfile.upsert({
-      where: { user_id: userId },
-      update: { nickname },
-      create: { user_id: userId, nickname },
+    // update는 대상이 없으면 던지기 때문에, 없는 사용자를 500이 아니라 404로
+    const { count } = await this.prismaService.user.updateMany({
+      where: { id: userId },
+      data: { nickname },
     });
+
+    if (count === 0) {
+      throw UserNotFoundException();
+    }
 
     return { id: userId, nickname };
   }
