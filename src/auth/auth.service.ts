@@ -188,7 +188,7 @@ export class AuthService {
       profile: { create: { nickname: request.nickname } },
     });
 
-    // DB 설계의 `first_use:{userId}` - 로그인 시 isFirstLogin 판별에 사용
+    // DB 설계의 `first_use:{userId}`
     await this.redisService.set(
       firstUseKey(user.id),
       '',
