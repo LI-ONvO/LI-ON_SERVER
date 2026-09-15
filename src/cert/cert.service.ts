@@ -105,7 +105,13 @@ export class CertService {
     };
   }
 
-  private orderBy(sort?: string): Prisma.CertificationOrderByWithRelationInput {
+  // private orderBy(sort?: string): Prisma.CertificationOrderByWithRelationInput {
+
+  private orderBy(
+    sort?: string,
+  ):
+    | Prisma.CertificationOrderByWithRelationInput
+    | Prisma.CertificationOrderByWithRelationInput[] {
     // 페이지네이션이 흔들리지 않게 기본 정렬을 고정 **존중(존나 중요함)**
     if (!sort) {
       return { jm_cd: 'asc' };
@@ -125,6 +131,9 @@ export class CertService {
       );
     }
 
-    return { [column]: direction };
+    return column === 'jm_cd'
+      ? { jm_cd: direction }
+      : [{ [column]: direction }, { jm_cd: 'asc' }];
+    // return { [column]: direction };
   }
 }
