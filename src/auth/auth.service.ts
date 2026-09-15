@@ -128,7 +128,7 @@ export class AuthService {
       throw everSent === 1 ? CodeExpiredException() : CodeNotFoundException();
     }
 
-    // 6자리 코드라 시도 횟수 제한이 없으면 전수 대입이 가능하다.
+    // 6자리 코드라 시도 횟수 제한이 없으면 전수 대입이 가능
     if (
       (await this.incr(attemptKey(normalizedEmail), this.codeTtl)) >
       this.maxAttempt
@@ -172,8 +172,6 @@ export class AuthService {
       throw PasswordMismatchException();
     }
 
-    // 명세의 signup 에는 별도 인증 실패 코드가 없어 VALIDATION_ERROR(422) 로 응답한다.
-    // del 반환값으로 확인 + 소비를 한 번에 하여 마커 재사용을 막는다.
     if ((await this.redisService.del(verifiedKey(normalizedEmail))) !== 1) {
       throw ValidationErrorException('이메일 인증이 완료되지 않았습니다.');
     }
@@ -185,10 +183,10 @@ export class AuthService {
     const user = await this.userService.createUser({
       email: normalizedEmail,
       password_hash: await bcrypt.hash(request.password, SALT_ROUNDS),
-      profile: { create: { nickname: request.nickname } },
+      nickname: request.nickname,
     });
 
-    // DB 설계의 `first_use:{userId}` - 로그인 시 isFirstLogin 판별에 사용
+    // DB 설계의 `first_use:{userId}`
     await this.redisService.set(
       firstUseKey(user.id),
       '',
@@ -246,7 +244,7 @@ export class AuthService {
       user: {
         userId: user.id,
         email: user.email,
-        nickname: user.profile?.nickname ?? '',
+        nickname: user.nickname,
       },
       isFirstLogin,
     };
