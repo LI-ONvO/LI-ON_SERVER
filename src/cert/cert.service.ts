@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'generated/prisma/client';
+import { toDateString } from '../common/date';
 import { ValidationErrorException } from '../common/exception/service.exception';
 import { PrismaService } from '../common/prisma/prisma.service';
 import {
@@ -19,9 +20,6 @@ const SORT_COLUMNS = new Map<string, 'jm_nm' | 'jm_cd'>([
   ['name', 'jm_nm'],
   ['jmCd', 'jm_cd'],
 ]);
-
-const toDateString = (value: Date | null): string | null =>
-  value === null ? null : value.toISOString().slice(0, 10);
 
 @Injectable()
 export class CertService {
