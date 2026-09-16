@@ -2,8 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { AI_SERVER_UNAVAILABLE } from '../common/ai/ai.error.code';
 import { AiServerUnavailableException } from '../common/ai/ai.exception';
 import { AiService } from '../common/ai/ai.service';
+import { toIsoSeconds } from '../common/date';
 import { EntityNotFoundException } from '../common/exception/service.exception';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { toOnboardingPayload } from '../user/onboarding.payload';
 import {
   CreateRecommendationResponse,
   RecommendationResponse,
@@ -13,15 +15,6 @@ import {
   OnboardingNotCompletedException,
   RecommendationNotFoundException,
 } from './cert.exception';
-
-type OnboardingAnswerRow = {
-  question: { id: number; title: string; order_no: number };
-  option: { label: string; order_no: number };
-};
-
-// 명세의 generatedAt 은 밀리초가 없다 → cert.md §3
-const toIsoSeconds = (value: Date): string =>
-  `${value.toISOString().slice(0, 19)}Z`;
 
 @Injectable()
 export class RecommendationService {
@@ -73,7 +66,7 @@ export class RecommendationService {
         size,
         user: {
           nickname: user.nickname,
-          onboarding: this.toOnboardingPayload(user.onboarding_answers),
+          onboarding: toOnboardingPayload(user.onboarding_answers),
         },
       },
       AI_SERVER_UNAVAILABLE,
@@ -193,38 +186,5 @@ export class RecommendationService {
         reason: item.reason,
       })),
     };
-  }
-
-  private toOnboardingPayload(
-    answers: OnboardingAnswerRow[],
-  ): { title: string; values: string[] }[] {
-    const questions = new Map<
-      number,
-      {
-        title: string;
-        orderNo: number;
-        options: OnboardingAnswerRow['option'][];
-      }
-    >();
-
-    for (const answer of answers) {
-      const question = questions.get(answer.question.id) ?? {
-        title: answer.question.title,
-        orderNo: answer.question.order_no,
-        options: [],
-      };
-
-      question.options.push(answer.option);
-      questions.set(answer.question.id, question);
-    }
-
-    return [...questions.values()]
-      .sort((left, right) => left.orderNo - right.orderNo)
-      .map((question) => ({
-        title: question.title,
-        values: question.options
-          .sort((left, right) => left.order_no - right.order_no)
-          .map((option) => option.label),
-      }));
   }
 }
