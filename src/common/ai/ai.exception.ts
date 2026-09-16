@@ -5,3 +5,6 @@ export const AiServerUnavailableException = (
   message?: string,
 ): ServiceException =>
   new ServiceException(AiErrorCode.AI_SERVER_UNAVAILABLE, message);
+
+export const AiServerErrorException = (message?: string): ServiceException =>
+  new ServiceException(AiErrorCode.AI_SERVER_ERROR, message);
