@@ -5,7 +5,11 @@ import { AI_SERVER_ERROR, AI_SERVER_TIMEOUT } from '../common/ai/ai.error.code';
 import { AiServerErrorException } from '../common/ai/ai.exception';
 import { AiService } from '../common/ai/ai.service';
 import { toIsoSeconds } from '../common/date';
-import { EntityNotFoundException } from '../common/exception/service.exception';
+import { CONFLICT } from '../common/exception/error.code';
+import {
+  EntityNotFoundException,
+  ServiceException,
+} from '../common/exception/service.exception';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { toOnboardingPayload } from '../user/onboarding.payload';
 import {
@@ -184,35 +188,46 @@ export class ChatService {
 
     const reply = aiResponse?.content;
 
-    // 빈 답변이 남는 대화를 만들지 않는다 → roadmap.md §4
+    // 빈 답변이 남는 대화를 만들지 않도록 AI 서버가 실패하면 502/504 로 매핑
     if (typeof reply !== 'string' || reply.trim() === '') {
       throw AiServerErrorException();
     }
 
     const repliedAt = new Date();
 
-    const [userMessage, aiMessage] = await this.prismaService.$transaction([
-      this.prismaService.chatMessage.create({
-        data: {
-          session_id: sessionId,
-          sender: 'USER',
-          content,
-          created_at: sentAt,
-        },
-      }),
-      this.prismaService.chatMessage.create({
-        data: {
-          session_id: sessionId,
-          sender: 'AI',
-          content: reply,
-          created_at: repliedAt,
-        },
-      }),
-      this.prismaService.chatSession.update({
-        where: { id: sessionId },
-        data: { updated_at: repliedAt },
-      }),
-    ]);
+    const [userMessage, aiMessage] = await this.prismaService.$transaction(
+      async (tx) => {
+        // 조회 뒤 다른 요청을 먼저 저장한다면 이전의 history로 만든 것이라 버림
+        // 세션을 잠그고 진행해야 메시지 FK공유 중 교착되지 않음
+        const { count } = await tx.chatSession.updateMany({
+          where: { id: sessionId, updated_at: session.updated_at },
+          data: { updated_at: repliedAt },
+        });
+
+        if (count === 0) {
+          throw new ServiceException(CONFLICT);
+        }
+
+        return [
+          await tx.chatMessage.create({
+            data: {
+              session_id: sessionId,
+              sender: 'USER',
+              content,
+              created_at: sentAt,
+            },
+          }),
+          await tx.chatMessage.create({
+            data: {
+              session_id: sessionId,
+              sender: 'AI',
+              content: reply,
+              created_at: repliedAt,
+            },
+          }),
+        ];
+      },
+    );
 
     return {
       userMessage: toMessageResponse(userMessage),

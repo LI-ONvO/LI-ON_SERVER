@@ -20,6 +20,12 @@ export const UNAUTHORIZED: ErrorCode = {
   message: '인증이 필요합니다.',
 };
 
+export const CONFLICT: ErrorCode = {
+  status: 409,
+  code: 'CONFLICT',
+  message: '요청이 충돌했습니다.',
+};
+
 export const VALIDATION_ERROR: ErrorCode = {
   status: 422,
   code: 'VALIDATION_ERROR',
