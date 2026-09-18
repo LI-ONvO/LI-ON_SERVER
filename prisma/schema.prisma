@@ -26,6 +26,8 @@ model User {
   desired_fields UserDesiredField[]
   onboarding_answers OnboardingAnswer[]
   recommendation Recommendation?
+  chat_sessions ChatSession[]
+  roadmaps Roadmap[]
 
   @@map("user")
 }
@@ -119,11 +121,13 @@ model Certification {
   exam_schedules ExamSchedule[]
   fields CertificateField[]
   recommendation_items RecommendationItem[]
+  chat_sessions ChatSession[]
 
   @@map("certification")
 }
 
-// 국가기술자격만 행이 존재한다. 공공데이터 결측이 흔해 jm_cd 외에는 전부 nullable
+// 국가기술자격만 행이 존재
+// 공공데이터 결측이 흔해 jm_cd 외에는 전부 nullable
 model QualDetail {
   jm_cd String @id @db.VarChar(10)
   mdoblig_fld_nm String? @db.VarChar(100)
@@ -142,8 +146,8 @@ model ExamSchedule {
   jm_cd String @db.VarChar(10)
   impl_yy Int @db.SmallInt
   impl_seq String @db.VarChar(10)
+
   // doc_reg_start_dt 파생 STORED 생성 컬럼(NULL 은 1000-01-01). Prisma 가 생성 컬럼을 모르므로
-  // 마이그레이션 SQL 에서 직접 만든다. 이 서버는 exam_schedule 을 읽기만 한다(적재는 별도 서버)
   reg_key DateTime @db.Date
   description String? @db.VarChar(255)
   doc_reg_start_dt DateTime? @db.Date
@@ -199,4 +203,65 @@ model RecommendationItem {
 
   @@unique([recommendation_id, rank_no])
   @@map("recommendation_item")
+}
+
+enum ChatSender {
+  USER
+  AI
+}
+
+model ChatSession {
+  id Int @id @default(autoincrement())
+  user_id Int
+  jm_cd String? @db.VarChar(10)
+  title String @db.VarChar(255)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  certification Certification? @relation(fields: [jm_cd], references: [jm_cd], onDelete: SetNull) // 종목이 삭제돼도 대화는 남김
+  messages ChatMessage[]
+  roadmaps Roadmap[]
+
+  @@map("chat_session")
+}
+
+model ChatMessage {
+  id Int @id @default(autoincrement())
+  session_id Int
+  sender ChatSender
+  content String @db.Text
+  created_at DateTime @default(now())
+
+  session ChatSession @relation(fields: [session_id], references: [id], onDelete: Cascade)
+
+  @@map("chat_message")
+}
+
+model Roadmap {
+  id Int @id @default(autoincrement())
+  session_id Int
+  user_id Int
+  title String @db.VarChar(255)
+  created_at DateTime @default(now())
+
+  session ChatSession @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  steps RoadmapStep[]
+
+  @@map("roadmap")
+}
+
+model RoadmapStep {
+  id Int @id @default(autoincrement())
+  roadmap_id Int
+  title String @db.VarChar(255)
+  description String @db.Text
+  order_no Int
+  target_date DateTime? @db.Date
+
+  roadmap Roadmap @relation(fields: [roadmap_id], references: [id], onDelete: Cascade)
+
+  @@unique([roadmap_id, order_no])
+  @@map("roadmap_step")
 }
