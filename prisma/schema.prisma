@@ -28,6 +28,7 @@ model User {
   recommendation Recommendation?
   chat_sessions ChatSession[]
   roadmaps Roadmap[]
+  resources Resource[]
 
   @@map("user")
 }
@@ -122,6 +123,7 @@ model Certification {
   fields CertificateField[]
   recommendation_items RecommendationItem[]
   chat_sessions ChatSession[]
+  resources Resource[]
 
   @@map("certification")
 }
@@ -222,6 +224,7 @@ model ChatSession {
   certification Certification? @relation(fields: [jm_cd], references: [jm_cd], onDelete: SetNull) // 종목이 삭제돼도 대화는 남김
   messages ChatMessage[]
   roadmaps Roadmap[]
+  resources Resource[]
 
   @@map("chat_session")
 }
@@ -264,4 +267,25 @@ model RoadmapStep {
 
   @@unique([roadmap_id, order_no])
   @@map("roadmap_step")
+}
+
+model Resource {
+  id Int @id @default(autoincrement())
+  user_id Int
+  session_id Int?
+  jm_cd String? @db.VarChar(10)
+  title String @db.VarChar(255)
+  url String @db.VarChar(2048)
+  // 생성 요청에 type이 없음 -> LINK로 고정
+  type String @default("LINK") @db.VarChar(20)
+  memo String @db.Text
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  // 세션과 종목이 사라져도 자료는 사자지지않음
+  session ChatSession? @relation(fields: [session_id], references: [id], onDelete: SetNull)
+  certification Certification? @relation(fields: [jm_cd], references: [jm_cd], onDelete: SetNull)
+
+  @@map("resource")
 }
