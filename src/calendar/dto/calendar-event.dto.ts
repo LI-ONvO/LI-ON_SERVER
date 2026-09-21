@@ -93,7 +93,7 @@ export class UpdateCalendarEventRequest {
 
   @IsOptional()
   @IsISO8601(ISO)
-  endAt?: string | null;정
+  endAt?: string | null;
 
   @ValidateIf(
     (request: UpdateCalendarEventRequest) => request.alarms !== undefined,
