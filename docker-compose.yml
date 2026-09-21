@@ -1,0 +1,64 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: li-on-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Seoul
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      - ${MYSQL_PORT}:3306
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: [CMD, mysqladmin, ping, -h, 127.0.0.1, -u, root, "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    container_name: li-on-redis
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Seoul
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    ports:
+      - ${REDIS_PORT}:6379
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [CMD, redis-cli, -a, "${REDIS_PASSWORD}", ping]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 10
+
+  app:
+    build: .
+    container_name: li-on-server
+    init: true
+    env_file: .env
+    environment:
+      # .env 는 호스트 기준(localhost)이라 컨테이너 네트워크 주소로 덮어쓴다
+      DATABASE_URL: mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # 로드맵 수립 때 AI 에 넘기는 today 를 로컬 시간대로 계산한다. UTC 면 KST 00~09시에 전날이 된다
+      TZ: Asia/Seoul
+    ports:
+      - ${PORT}:${PORT}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  mysql-data:
+  redis-data:
