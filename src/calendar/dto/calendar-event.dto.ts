@@ -15,7 +15,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-// strict 가 없으면 2026-02-30 을 통과시키고 Date 는 그걸 3월로 넘긴다
+// strict가 없으면 2026-02-30을 통과시키고 Date는 그걸 3월로 넘김
 const ISO = { strict: true, strictSeparator: true };
 
 export class AlarmRequest {
@@ -63,7 +63,8 @@ export class CreateCalendarEventRequest {
   @Max(2147483647)
   roadmapStepId?: number;
 
-  // IsOptional 은 null 도 건너뛴다. alarms 는 null 을 거절해야 해서 ValidateIf 를 쓴다
+  // IsOptional은 null도 넘김
+  // alarms는 null을 거절하기 떄문에 ValidateIf를 사용
   @ValidateIf(
     (request: CreateCalendarEventRequest) => request.alarms !== undefined,
   )
@@ -74,7 +75,7 @@ export class CreateCalendarEventRequest {
   alarms?: AlarmRequest[];
 }
 
-// roadmapStepId 는 수정 대상이 아니다
+// roadmapStepId는 수정 안함
 export class UpdateCalendarEventRequest {
   @IsOptional()
   @IsString()
@@ -106,7 +107,8 @@ export class UpdateCalendarEventRequest {
 }
 
 export class ListCalendarEventsRequest {
-  // 페이지네이션이 없어 범위가 필수다. IsISO8601 만으로는 날짜시각도 통과한다
+  // 페이지네이션이 없어 범위가 필수
+  // IsISO8601만으로는 날짜시각도 통과
   @IsISO8601(ISO)
   @Matches(/^\d{4}-\d{2}-\d{2}$/, {
     message: 'from 은 YYYY-MM-DD 여야 합니다.',
