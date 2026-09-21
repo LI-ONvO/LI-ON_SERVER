@@ -8,6 +8,8 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npx prisma generate && npm run build
+RUN chown -R node:node /app
+USER node
 
 # ponytail: devDependencies 를 그대로 둬서 시작 시 prisma migrate deploy 를 돌린다. 운영 이미지는 multi-stage + migrate 잡으로 분리
 # prisma.config.ts · generated/ 를 함께 컴파일해서 진입점이 dist/main 이 아니라 dist/src/main 이다
