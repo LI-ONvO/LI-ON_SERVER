@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { CalendarModule } from './calendar/calendar.module';
 import { CertModule } from './cert/cert.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
@@ -20,6 +21,7 @@ import { UserModule } from './user/user.module';
     CertModule,
     RoadmapModule,
     ResourceModule,
+    CalendarModule,
   ],
   controllers: [AppController],
   providers: [AppService],

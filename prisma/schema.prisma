@@ -29,6 +29,7 @@ model User {
   chat_sessions ChatSession[]
   roadmaps Roadmap[]
   resources Resource[]
+  calendar_events CalendarEvent[]
 
   @@map("user")
 }
@@ -264,6 +265,7 @@ model RoadmapStep {
   target_date DateTime? @db.Date
 
   roadmap Roadmap @relation(fields: [roadmap_id], references: [id], onDelete: Cascade)
+  calendar_events CalendarEvent[]
 
   @@unique([roadmap_id, order_no])
   @@map("roadmap_step")
@@ -288,4 +290,44 @@ model Resource {
   certification Certification? @relation(fields: [jm_cd], references: [jm_cd], onDelete: SetNull)
 
   @@map("resource")
+}
+
+enum AlarmStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model CalendarEvent {
+  id Int @id @default(autoincrement())
+  user_id Int
+  roadmap_step_id Int?
+  title String @db.VarChar(255)
+  // ERD는 NOT NULL 이지만 API 응답이 null을 허용
+  description String? @db.Text
+  start_at DateTime
+  // 마감일만 있는 일정을 허용
+  end_at DateTime?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  // 로드맵이 사라져도 사용자 일정은 남김
+  roadmap_step RoadmapStep? @relation(fields: [roadmap_step_id], references: [id], onDelete: SetNull)
+  alarms Alarm[]
+
+  @@map("calendar_event")
+}
+
+model Alarm {
+  id Int @id @default(autoincrement())
+  event_id Int
+  remind_at DateTime
+  sent_at DateTime?
+  status AlarmStatus @default(PENDING)
+
+  event CalendarEvent @relation(fields: [event_id], references: [id], onDelete: Cascade)
+
+  @@index([status, remind_at])
+  @@map("alarm")
 }
