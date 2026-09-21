@@ -138,55 +138,51 @@ export class CalendarService {
     eventId: number,
     request: UpdateCalendarEventRequest,
   ): Promise<CalendarEventResponse> {
-    const current = await this.prismaService.calendarEvent.findFirst({
-      where: { id: eventId, user_id: userId },
-      select: { start_at: true, end_at: true },
-    });
-
-    if (!current) {
-      throw EntityNotFoundException();
-    }
-
     const startAt =
       request.startAt === undefined
-        ? current.start_at
+        ? undefined
         : toDate('startAt', request.startAt);
     const endAt =
       request.endAt === undefined
-        ? current.end_at
+        ? undefined
         : request.endAt === null
           ? null
           : toDate('endAt', request.endAt);
-
-    assertRange(startAt, endAt);
 
     const remindAts =
       request.alarms === undefined ? null : toRemindAts(request.alarms);
 
     return this.prismaService.$transaction(async (tx) => {
-      // 소유권 확인과 수정 사이에 삭제되면 count 0 → 404
-      // 한 트렌젝션으로 관리
-      const { count } = await tx.calendarEvent.updateMany({
-        where: { id: eventId, user_id: userId },
+      // endAt < startAt 조합이 저장될 수 있음
+      const [current] = await tx.$queryRaw<
+        Pick<CalendarEvent, 'start_at' | 'end_at'>[]
+      >`SELECT start_at, end_at FROM calendar_event WHERE id = ${eventId} AND user_id = ${userId} FOR UPDATE`;
+
+      if (!current) {
+        throw EntityNotFoundException();
+      }
+
+      assertRange(
+        startAt ?? current.start_at,
+        endAt === undefined ? current.end_at : endAt,
+      );
+
+      await tx.calendarEvent.update({
+        where: { id: eventId },
         data: {
           ...(request.title === undefined ? {} : { title: request.title }),
           ...(request.description === undefined
             ? {}
             : { description: request.description }),
-          start_at: startAt,
-          end_at: endAt,
+          ...(startAt === undefined ? {} : { start_at: startAt }),
+          ...(endAt === undefined ? {} : { end_at: endAt }),
         },
       });
-
-      if (count === 0) {
-        throw EntityNotFoundException();
-      }
 
       // 필드가 없으면 기존 알림 유지
       // [] 면 전량 삭제
       // 값이 있으면 교체
       if (remindAts !== null) {
-
         // SENT/FAILED는 발송 이력
         // 삭제 하면 안됨
         await tx.alarm.deleteMany({
