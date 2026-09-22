@@ -91,7 +91,7 @@ export class AlarmWorker implements OnApplicationBootstrap, OnModuleDestroy {
       where: { status: 'PENDING', remind_at: { lte: new Date() } },
       include: {
         event: {
-          select: { id: true, user_id: true, title: true, description: true },
+          select: { id: true, user_id: true },
         },
       },
       orderBy: [{ remind_at: 'asc' }, { id: 'asc' }],
@@ -134,8 +134,11 @@ export class AlarmWorker implements OnApplicationBootstrap, OnModuleDestroy {
         : await this.fcmService.send(
             targets.map(({ alarm, token }) => ({
               token,
-              title: alarm.event.title,
-              body: alarm.event.description,
+
+              // 기기 토큰은 로그아웃한 뒤에도 남을 수 있기 때문에 담지 않음
+              title: '일정 알림',
+              body: null,
+
               // 앱이 알림을 눌렀을 때 일정 화면으로 보낼 때 씀
               data: {
                 alarmId: String(alarm.id),
