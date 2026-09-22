@@ -30,6 +30,7 @@ model User {
   roadmaps Roadmap[]
   resources Resource[]
   calendar_events CalendarEvent[]
+  device_tokens DeviceToken[]
 
   @@map("user")
 }
@@ -330,4 +331,17 @@ model Alarm {
 
   @@index([status, remind_at])
   @@map("alarm")
+}
+
+model DeviceToken {
+  id Int @id @default(autoincrement())
+  user_id Int
+  // FCM 토큰은 앱 설치마다 하나다. 같은 기기에서 다른 계정으로 로그인하면 소유자가 바뀐다
+  token String @unique @db.VarChar(512)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("device_token")
 }

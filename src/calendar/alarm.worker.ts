@@ -6,11 +6,11 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
-import { toIsoSeconds } from '../common/date';
+import { positive } from '../common/config';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { RedisService } from '../common/redis/redis.service';
+import { FcmService, PushResult } from './fcm.service';
 
-const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_INTERVAL_MS = 10000;
 const DEFAULT_BATCH_SIZE = 100;
 
@@ -23,16 +23,9 @@ const LOCK_MARGIN_MS = 30000;
 const RELEASE_LOCK =
   "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) end return 0";
 
-// 환경 설정에 값이 비었을 때를 대비
-const positive = (value: string | undefined, fallback: number): number =>
-  Number(value) > 0 ? Number(value) : fallback;
-
 @Injectable()
 export class AlarmWorker implements OnApplicationBootstrap, OnModuleDestroy {
   private readonly logger = new Logger(AlarmWorker.name);
-  private readonly baseUrl: string;
-  private readonly apiKey: string;
-  private readonly timeoutMs: number;
   private readonly intervalMs: number;
   private readonly batchSize: number;
   private timer?: NodeJS.Timeout;
@@ -40,16 +33,9 @@ export class AlarmWorker implements OnApplicationBootstrap, OnModuleDestroy {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly redisService: RedisService,
+    private readonly fcmService: FcmService,
     configService: ConfigService,
   ) {
-    this.baseUrl = configService
-      .getOrThrow<string>('APP_SERVER_URL')
-      .replace(/\/+$/, '');
-    this.apiKey = configService.getOrThrow<string>('APP_SERVER_API_KEY');
-    this.timeoutMs = positive(
-      configService.get<string>('APP_SERVER_TIMEOUT'),
-      DEFAULT_TIMEOUT_MS,
-    );
     this.intervalMs = positive(
       configService.get<string>('ALARM_WORKER_INTERVAL'),
       DEFAULT_INTERVAL_MS,
@@ -77,7 +63,8 @@ export class AlarmWorker implements OnApplicationBootstrap, OnModuleDestroy {
         LOCK_KEY,
         token,
         'PX',
-        this.timeoutMs + LOCK_MARGIN_MS,
+        // 액세스 토큰 발급 + 발송이 각각 타임아웃까지 걸릴 수 있다
+        this.fcmService.timeoutMs * 2 + LOCK_MARGIN_MS,
         'NX',
       );
 
@@ -103,7 +90,9 @@ export class AlarmWorker implements OnApplicationBootstrap, OnModuleDestroy {
     const alarms = await this.prismaService.alarm.findMany({
       where: { status: 'PENDING', remind_at: { lte: new Date() } },
       include: {
-        event: { select: { user_id: true, title: true, description: true } },
+        event: {
+          select: { id: true, user_id: true },
+        },
       },
       orderBy: [{ remind_at: 'asc' }, { id: 'asc' }],
       // 주기당 한 배치
@@ -115,95 +104,79 @@ export class AlarmWorker implements OnApplicationBootstrap, OnModuleDestroy {
       return;
     }
 
-    const ids = alarms.map((alarm) => alarm.id);
-    let response: Response;
+    const devices = await this.prismaService.deviceToken.findMany({
+      where: { user_id: { in: alarms.map((alarm) => alarm.event.user_id) } },
+      select: { user_id: true, token: true },
+    });
 
-    try {
-      response = await fetch(`${this.baseUrl}/notifications`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Api-Key': this.apiKey,
-        },
-        body: JSON.stringify({
-          // 배치마다 새로 만든다
-          requestId: randomUUID(),
-          notifications: alarms.map((alarm) => ({
-            alarmId: alarm.id,
-            userId: alarm.event.user_id,
-            title: alarm.event.title,
-            description: alarm.event.description,
-            remindAt: toIsoSeconds(alarm.remind_at),
-          })),
-        }),
-        signal: AbortSignal.timeout(this.timeoutMs),
-      });
-    } catch (error) {
-      // 어플 서버가 받았는지 알 수 없음
-      // 중복 푸시 가능
-      this.logger.warn(
-        `알림 ${ids.length}건 발송 요청 실패, 다음 주기에 재시도: ${String(error)}`,
-      );
-      return;
+    const tokensByUser = new Map<number, string[]>();
+
+    for (const device of devices) {
+      tokensByUser.set(device.user_id, [
+        ...(tokensByUser.get(device.user_id) ?? []),
+        device.token,
+      ]);
     }
 
-    if (response.status === 422) {
-      // 배치 전체 거절
-      await this.prismaService.alarm.updateMany({
-        where: { id: { in: ids }, status: 'PENDING' },
-        data: { status: 'FAILED' },
-      });
-      this.logger.error(
-        `어플 서버가 알림 ${ids.length}건을 거절(422), FAILED 처리`,
-      );
-      return;
-    }
+    // 알림 하나가 사용자의 기기 수만큼 나간다
+    const targets = alarms.flatMap((alarm) =>
+      (tokensByUser.get(alarm.event.user_id) ?? []).map((token) => ({
+        alarm,
+        token,
+      })),
+    );
 
-    if (!response.ok) {
-      // 500은 PENDING 으로 되돌려야한다는 뜻
-      // 401은 키 설정 문제라 고칠 때까지 알림을 버리지 않음
-      this.logger.error(
-        `알림 발송 실패(${response.status}), ${ids.length}건 PENDING 유지`,
-      );
-      return;
-    }
+    // 액세스 토큰을 못 받으면 여기서 던짐
+    // 상태를 안 바꿨으니 전부 PENDING 으로 남아 다음 주기에 다시 시도
+    const results =
+      targets.length === 0
+        ? []
+        : await this.fcmService.send(
+            targets.map(({ alarm, token }) => ({
+              token,
 
-    const body: unknown = await response.json().catch(() => null);
-    const results = (body as { results?: unknown } | null)?.results;
+              // 기기 토큰은 로그아웃한 뒤에도 남을 수 있기 때문에 담지 않음
+              title: '일정 알림',
+              body: null,
 
-    if (!Array.isArray(results)) {
-      this.logger.error(
-        `어플 서버 응답에 results 가 없음, ${ids.length}건 PENDING 유지`,
-      );
-      return;
-    }
+              // 앱이 알림을 눌렀을 때 일정 화면으로 보낼 때 씀
+              data: {
+                alarmId: String(alarm.id),
+                eventId: String(alarm.event.id),
+              },
+              collapseKey: `alarm-${alarm.id}`,
+            })),
+          );
 
-    const requested = new Set(ids);
+    const resultsByAlarm = new Map<number, PushResult[]>();
+
+    targets.forEach(({ alarm }, index) => {
+      resultsByAlarm.set(alarm.id, [
+        ...(resultsByAlarm.get(alarm.id) ?? []),
+        results[index],
+      ]);
+    });
+
     const sent: number[] = [];
     const failed: number[] = [];
 
-    for (const rawResult of results as unknown[]) {
-      if (typeof rawResult !== 'object' || rawResult === null) {
-        continue;
-      }
+    for (const alarm of alarms) {
+      const outcomes = resultsByAlarm.get(alarm.id) ?? [];
 
-      const { alarmId, status } = rawResult as {
-        alarmId?: unknown;
-        status?: unknown;
-      };
-
-      if (typeof alarmId !== 'number' || !requested.has(alarmId)) {
-        continue;
-      }
-
-      if (status === 'SENT') {
-        sent.push(alarmId);
-      } else if (status === 'FAILED') {
-        failed.push(alarmId);
+      // 기기 하나라도 받으면 SENT
+      // 기기가 없거나 전부 영구 실패면 FAILED.
+      // 그 의외의 PENDING 으로 두고 다음 주기에 다시 시도
+      if (outcomes.includes('SENT')) {
+        sent.push(alarm.id);
+      } else if (!outcomes.includes('RETRY')) {
+        failed.push(alarm.id);
       }
     }
 
-    // 결과에 빠진 알림은 PENDING으로 남아 다음 주기에 다시 나감
+    const unregistered = targets
+      .filter((_, index) => results[index] === 'UNREGISTERED')
+      .map(({ token }) => token);
+
     // status 조건은 그 사이 일정 수정으로 교체됐거나 이미 처리된 알림을 건드리지 않게 함
     await this.prismaService.$transaction([
       this.prismaService.alarm.updateMany({
@@ -214,10 +187,14 @@ export class AlarmWorker implements OnApplicationBootstrap, OnModuleDestroy {
         where: { id: { in: failed }, status: 'PENDING' },
         data: { status: 'FAILED' },
       }),
+      // 앱을 지웠거나 만료된 토큰
+      this.prismaService.deviceToken.deleteMany({
+        where: { token: { in: unregistered } },
+      }),
     ]);
 
     this.logger.log(
-      `알림 발송 결과: SENT ${sent.length} · FAILED ${failed.length} · 미응답 ${ids.length - sent.length - failed.length}`,
+      `알림 발송 결과: SENT ${sent.length} · FAILED ${failed.length} · 재시도 ${alarms.length - sent.length - failed.length} · 만료 토큰 ${unregistered.length}`,
     );
   }
 }
