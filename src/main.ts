@@ -12,7 +12,7 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-      // 검증 실패도 ServiceException 으로 모아 응답 포맷을 통성일함.
+      // 검증 실패도 ServiceException으로 모아 응답 포맷을 통성일함.
       exceptionFactory: (errors) =>
         ValidationErrorException(
           errors
