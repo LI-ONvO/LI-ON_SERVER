@@ -23,4 +23,11 @@ export class CertificateDetailResponse {
   docFee: number | null;
   pracFee: number | null;
   examSchedules: ExamScheduleResponse[];
+
+  // 아래는 AI 서버 추천 근거
+  qualGbCd: string;
+  seriesNm: string | null;
+  mdobligFldNm: string | null;
+  job: string | null;
+  career: string | null;
 }
