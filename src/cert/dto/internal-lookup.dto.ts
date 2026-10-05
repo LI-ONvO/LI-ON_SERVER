@@ -13,7 +13,6 @@ import {
 
 // AI 서버 전용 조회
 export class KeywordSearchRequest {
-
   // 쉼표(,)로 구분되어 들어온 문자열을 배열로 변환
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string'

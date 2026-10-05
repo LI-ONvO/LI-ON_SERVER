@@ -50,7 +50,6 @@ export class InternalKeyGuard implements CanActivate {
 
 @Injectable()
 export class JwtOrInternalKeyGuard extends JwtAuthGuard {
-
   // DI -> Nest가 알아서 생성함
   constructor(private readonly internalKeyGuard: InternalKeyGuard) {
     super();
