@@ -41,7 +41,6 @@ model Field {
 
   desired_by UserDesiredField[]
   onboarding_options OnboardingOption[]
-  certificates CertificateField[]
 
   @@map("field")
 }
@@ -122,7 +121,6 @@ model Certification {
 
   qual_detail QualDetail?
   exam_schedules ExamSchedule[]
-  fields CertificateField[]
   recommendation_items RecommendationItem[]
   chat_sessions ChatSession[]
   resources Resource[]
@@ -169,18 +167,6 @@ model ExamSchedule {
 
   @@id([jm_cd, impl_yy, impl_seq, reg_key])
   @@map("exam_schedule")
-}
-
-model CertificateField {
-  id Int @id @default(autoincrement())
-  jm_cd String @db.VarChar(10)
-  field_id Int
-
-  certification Certification @relation(fields: [jm_cd], references: [jm_cd], onDelete: Cascade)
-  field Field @relation(fields: [field_id], references: [id], onDelete: Cascade)
-
-  @@unique([jm_cd, field_id])
-  @@map("certificate_field")
 }
 
 model Recommendation {
