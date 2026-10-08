@@ -71,9 +71,6 @@ export class CertService {
 
     const where: Prisma.CertificationWhereInput = {
       ...(request.keyword ? { jm_nm: { contains: request.keyword } } : {}),
-      ...(request.fieldId
-        ? { fields: { some: { field_id: request.fieldId } } }
-        : {}),
     };
 
     const [rows, totalElements] = await this.prismaService.$transaction([

@@ -17,9 +17,3 @@ export const ONBOARDING_NOT_COMPLETED: ErrorCode = {
   code: 'ONBOARDING_NOT_COMPLETED',
   message: '온보딩을 먼저 완료해 주세요.',
 };
-
-export const NO_CANDIDATE_CERTIFICATE: ErrorCode = {
-  status: 422,
-  code: 'NO_CANDIDATE_CERTIFICATE',
-  message: '추천 가능한 자격증이 없습니다.',
-};

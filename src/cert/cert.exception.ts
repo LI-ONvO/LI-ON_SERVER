@@ -15,8 +15,3 @@ export const OnboardingNotCompletedException = (
   message?: string,
 ): ServiceException =>
   new ServiceException(CertErrorCode.ONBOARDING_NOT_COMPLETED, message);
-
-export const NoCandidateCertificateException = (
-  message?: string,
-): ServiceException =>
-  new ServiceException(CertErrorCode.NO_CANDIDATE_CERTIFICATE, message);

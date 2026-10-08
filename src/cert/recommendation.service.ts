@@ -11,7 +11,6 @@ import {
   RecommendationResponse,
 } from './dto/recommendation.dto';
 import {
-  NoCandidateCertificateException,
   OnboardingNotCompletedException,
   RecommendationNotFoundException,
 } from './cert.exception';
@@ -30,7 +29,6 @@ export class RecommendationService {
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
       include: {
-        desired_fields: true,
         onboarding_answers: {
           include: { question: true, option: true },
         },
@@ -43,20 +41,6 @@ export class RecommendationService {
 
     if (!user.is_onboarded) {
       throw OnboardingNotCompletedException();
-    }
-
-    const candidates = await this.prismaService.certificateField.findMany({
-      where: {
-        field_id: {
-          in: user.desired_fields.map((desired) => desired.field_id),
-        },
-      },
-      distinct: ['jm_cd'],
-      select: { jm_cd: true },
-    });
-
-    if (candidates.length === 0) {
-      throw NoCandidateCertificateException();
     }
 
     const aiResponse = await this.aiService.post<{ items: unknown }>(
@@ -82,7 +66,6 @@ export class RecommendationService {
     const reasonByJmCd = new Map<string, string>();
 
     for (const rawItem of rawItems as unknown[]) {
-
       if (typeof rawItem !== 'object' || rawItem === null) {
         continue;
       }
