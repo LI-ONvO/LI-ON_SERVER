@@ -9,12 +9,6 @@ export class SearchCertificatesRequest {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  @Min(1)
-  fieldId?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
   @Min(0)
   page?: number;
 
