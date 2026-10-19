@@ -18,6 +18,7 @@ import {
   CreateChatSessionRequest,
   CreateChatSessionResponse,
   IdParam,
+  initChatSessionRequest,
   ListChatSessionsRequest,
   ListChatSessionsResponse,
   SendMessageRequest,
@@ -102,5 +103,15 @@ export class RoadmapController {
     @Param() { id }: IdParam,
   ): Promise<RoadmapDetailResponse> {
     return this.roadmapService.get(req.user.id, id);
+  }
+
+  @Post('/chat/sessions/:id/certificates')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async initRoadmap(
+    @Req() req: Request & { user: User },
+    @Param() { id }: IdParam,
+    @Body() request: initChatSessionRequest,
+  ): Promise<void> {
+    await this.roadmapService.init(req.user.id, id, request.jmCd);
   }
 }

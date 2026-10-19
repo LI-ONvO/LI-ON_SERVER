@@ -67,6 +67,13 @@ export class CreateChatSessionRequest {
   title: string;
 }
 
+export class initChatSessionRequest {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  jmCd?: string;
+}
+
 export class CreateChatSessionResponse {
   id: number;
   title: string;
