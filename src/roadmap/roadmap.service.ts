@@ -243,10 +243,16 @@ export class RoadmapService {
         throw EntityNotFoundException();
       }
 
-      await this.prismaService.chatSession.update({
-        where: { id: sessionId },
+      // 중복 요청 방지
+      // 이미 jm_cd가 있는 경우 update되지 않음
+      const { count } = await this.prismaService.chatSession.updateMany({
+        where: { id: sessionId, user_id: userId, jm_cd: null },
         data: { jm_cd: certification.jm_cd },
       });
+
+      if (count === 0) {
+        throw CertificateAlreadyExistsException();
+      }
     }
   }
 }
