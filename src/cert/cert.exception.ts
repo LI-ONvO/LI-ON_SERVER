@@ -15,3 +15,8 @@ export const OnboardingNotCompletedException = (
   message?: string,
 ): ServiceException =>
   new ServiceException(CertErrorCode.ONBOARDING_NOT_COMPLETED, message);
+
+export const CertificateAlreadyExistsException = (
+  message?: string,
+): ServiceException =>
+  new ServiceException(CertErrorCode.CERTIFICATE_ALREADY_EXISTS, message);
