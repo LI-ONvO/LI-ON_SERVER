@@ -13,6 +13,7 @@ import {
   RoadmapStepResponse,
   RoadmapSummaryResponse,
 } from './dto/roadmap.dto';
+import { CertificateAlreadyExistsException } from '../cert/cert.exception';
 
 type AiStep = {
   title: string;
@@ -216,5 +217,35 @@ export class RoadmapService {
       title: roadmap.title,
       steps: roadmap.steps.map(toStepResponse),
     };
+  }
+
+  async init(userId: number, sessionId: number, jmCd?: string | null): Promise<void> {
+    const session = await this.prismaService.chatSession.findFirst({
+      where: { id: sessionId, user_id: userId },
+      include: { certification: true },
+    });
+
+    if (!session) {
+      throw EntityNotFoundException();
+    }
+
+    if (jmCd) {
+      if (session.certification) {
+        throw CertificateAlreadyExistsException();
+      }
+
+      const certification = await this.prismaService.certification.findUnique({
+        where: { jm_cd: jmCd },
+      });
+
+      if (!certification) {
+        throw EntityNotFoundException();
+      }
+
+      await this.prismaService.chatSession.update({
+        where: { id: sessionId },
+        data: { certification_id: certification.jm_cd },
+      });
+    }
   }
 }
