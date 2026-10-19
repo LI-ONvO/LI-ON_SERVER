@@ -229,10 +229,11 @@ export class RoadmapService {
       throw EntityNotFoundException();
     }
 
-    if (jmCd) {
-      if (session.certification) {
+    if (session.certification) {
         throw CertificateAlreadyExistsException();
-      }
+    }
+    
+    if (jmCd) {
 
       const certification = await this.prismaService.certification.findUnique({
         where: { jm_cd: jmCd },
