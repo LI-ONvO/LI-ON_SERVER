@@ -244,7 +244,7 @@ export class RoadmapService {
 
       await this.prismaService.chatSession.update({
         where: { id: sessionId },
-        data: { certification_id: certification.jm_cd },
+        data: { jm_cd: certification.jm_cd },
       });
     }
   }
