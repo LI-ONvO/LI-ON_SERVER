@@ -19,6 +19,11 @@ import {
 
 const DEFAULT_SIZE = 20;
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const toExpiresAt = (value: Date | null): string | null =>
+  value === null ? null : toIsoSeconds(value);
+
 const toResourceResponse = (resource: Resource): ResourceResponse => ({
   id: resource.id,
   title: resource.title,
@@ -26,6 +31,7 @@ const toResourceResponse = (resource: Resource): ResourceResponse => ({
   memo: resource.memo,
   sessionId: resource.session_id,
   jmCd: resource.jm_cd,
+  expiresAt: toExpiresAt(resource.expires_at),
   createdAt: toIsoSeconds(resource.created_at),
 });
 
@@ -69,6 +75,12 @@ export class ResourceService {
         // ERD의 memo는 NOT NULL로 잘못 명시되어있음 -> 수정 필요
         // api는 NULL을 허용하는 방식이기 떄문에 그 방식으로 개발함
         memo: request.memo ?? '',
+        // 직접 추가한 자료처럼 일수가 없으면 만료되지 않음
+        expires_at:
+          request.expirationDate === undefined ||
+          request.expirationDate === null
+            ? null
+            : new Date(Date.now() + request.expirationDate * DAY_MS),
       },
     });
 
@@ -141,6 +153,7 @@ export class ResourceService {
               jmCd: resource.certification.jm_cd,
               name: resource.certification.jm_nm,
             },
+      expiresAt: toExpiresAt(resource.expires_at),
       createdAt: toIsoSeconds(resource.created_at),
     };
   }

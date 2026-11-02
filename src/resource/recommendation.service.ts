@@ -10,11 +10,19 @@ import {
   CreateResourceRecommendationResponse,
   ResourceRecommendationItemResponse,
 } from './dto/recommendation.dto';
+import { MAX_EXPIRATION_DAYS } from './dto/resource.dto';
 import { NoCandidateResourceException } from './resource.exception';
 
-const isItem = (
-  value: unknown,
-): value is ResourceRecommendationItemResponse => {
+// AI 응답 항목
+// expiration_date는 저장 후 삭제까지의 일수
+type AiResourceItem = {
+  title: string;
+  url: string;
+  reason: string;
+  expiration_date?: unknown;
+};
+
+const isItem = (value: unknown): value is AiResourceItem => {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -31,6 +39,15 @@ const isItem = (
     typeof item.reason === 'string'
   );
 };
+
+// 만료 일수가 잘못됐다고 추천을 버리지는 않음. 만료 없이 저장되도록 null
+const toExpirationDate = (value: unknown): number | null =>
+  typeof value === 'number' &&
+  Number.isInteger(value) &&
+  value >= 1 &&
+  value <= MAX_EXPIRATION_DAYS
+    ? value
+    : null;
 
 @Injectable()
 export class ResourceRecommendationService {
@@ -98,6 +115,7 @@ export class ResourceRecommendationService {
         title: rawItem.title,
         url: rawItem.url,
         reason: rawItem.reason,
+        expirationDate: toExpirationDate(rawItem.expiration_date),
       });
     }
 
