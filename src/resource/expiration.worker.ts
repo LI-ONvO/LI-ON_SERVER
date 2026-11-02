@@ -11,6 +11,8 @@ import { PrismaService } from '../common/prisma/prisma.service';
 // 만료는 일 단위라 한 시간 간격이면 충분
 const DEFAULT_INTERVAL_MS = 60 * 60 * 1000;
 
+const MAX_TIMER_DELAY_MS = 2 ** 31 - 1;
+
 // expires_at이 지난 자료를 지움
 // 여러 인스턴스가 동시에 돌려도 결과가 같아서 락을 잡지 않음
 @Injectable()
@@ -25,10 +27,11 @@ export class ResourceExpirationWorker
     private readonly prismaService: PrismaService,
     configService: ConfigService,
   ) {
-    this.intervalMs = positive(
+    const configured = positive(
       configService.get<string>('RESOURCE_EXPIRATION_INTERVAL'),
       DEFAULT_INTERVAL_MS,
     );
+    this.intervalMs = Math.min(configured, MAX_TIMER_DELAY_MS);
   }
 
   onApplicationBootstrap(): void {
