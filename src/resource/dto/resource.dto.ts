@@ -10,6 +10,9 @@ import {
   Min,
 } from 'class-validator';
 
+// 만료 일수 상한(10년)
+export const MAX_EXPIRATION_DAYS = 3650;
+
 export class CreateResourceRequest {
   @IsString()
   @IsNotEmpty()
@@ -36,6 +39,14 @@ export class CreateResourceRequest {
   @IsString()
   @IsNotEmpty()
   jmCd?: string;
+
+  // 추천 항목의 expirationDate(일수). 저장 시점부터 이 일수가 지나면 자료가 삭제됨
+  // 추천의 null 을 그대로 넘겨도 되도록 null 을 허용
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(MAX_EXPIRATION_DAYS)
+  expirationDate?: number | null;
 }
 
 export class ResourceResponse {
@@ -45,6 +56,7 @@ export class ResourceResponse {
   memo: string;
   sessionId: number | null;
   jmCd: string | null;
+  expiresAt: string | null;
   createdAt: string;
 }
 
@@ -107,6 +119,7 @@ export class ResourceDetailResponse {
   type: string;
   session: SessionRefResponse | null;
   certificate: CertificateRefResponse | null;
+  expiresAt: string | null;
   createdAt: string;
 }
 
