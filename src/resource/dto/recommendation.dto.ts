@@ -30,6 +30,7 @@ export class ResourceRecommendationItemResponse {
   title: string;
   url: string;
   reason: string;
+  expirationDate: number | null;
 }
 
 // 추천 결과는 `/api/resources`로 저장
