@@ -268,6 +268,8 @@ model Resource {
   // 생성 요청에 type이 없음 -> LINK로 고정
   type String @default("LINK") @db.VarChar(20)
   memo String @db.Text
+  // 이 시각이 지나면 ResourceExpirationWorker 가 삭제. null 이면 삭제하지 않음
+  expires_at DateTime?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
@@ -276,6 +278,7 @@ model Resource {
   session ChatSession? @relation(fields: [session_id], references: [id], onDelete: SetNull)
   certification Certification? @relation(fields: [jm_cd], references: [jm_cd], onDelete: SetNull)
 
+  @@index([expires_at])
   @@map("resource")
 }
 
