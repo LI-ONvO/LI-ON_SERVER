@@ -22,6 +22,7 @@ export class ResourceExpirationWorker
   private readonly logger = new Logger(ResourceExpirationWorker.name);
   private readonly intervalMs: number;
   private timer?: NodeJS.Timeout;
+  private running = false;
 
   constructor(
     private readonly prismaService: PrismaService,
@@ -45,7 +46,14 @@ export class ResourceExpirationWorker
     clearInterval(this.timer);
   }
 
+  // 이전 삭제가 주기보다 오래 걸려도 같은 프로세스에서 DELETE가 겹치지 않도록
   async tick(): Promise<void> {
+    if (this.running) {
+      return;
+    }
+
+    this.running = true;
+
     try {
       const { count } = await this.prismaService.resource.deleteMany({
         where: { expires_at: { lte: new Date() } },
@@ -60,6 +68,8 @@ export class ResourceExpirationWorker
         '만료 자료 삭제 실패',
         error instanceof Error ? error.stack : String(error),
       );
+    } finally {
+      this.running = false;
     }
   }
 }
